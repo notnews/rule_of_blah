@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-RESULTS_DIR = Path("results")
+PROJECT_ROOT = Path(__file__).parent.parent
+RESULTS_DIR = PROJECT_ROOT / "results"
+DATA_DIR = PROJECT_ROOT / "data"
 RESULTS_DIR.mkdir(exist_ok=True)
 
 MODEL = "claude-sonnet-4-20250514"

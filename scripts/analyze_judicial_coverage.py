@@ -20,13 +20,12 @@ import argparse
 import json
 import os
 import re
-from pathlib import Path
 
 import anthropic
 import pandas as pd
 from tqdm.auto import tqdm
 
-from config import DATA_SOURCES, MAX_BATCH_SIZE, MODEL, RESULTS_DIR, verify_quote
+from config import DATA_DIR, DATA_SOURCES, MAX_BATCH_SIZE, MODEL, RESULTS_DIR, verify_quote
 from prompts import APPOINTMENT_DETECTION_PROMPT, DECISION_DETECTION_PROMPT
 
 
@@ -38,15 +37,15 @@ def get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=api_key)
 
 
-def load_judicial_articles(source: str = "cnn", data_dir: Path = Path(".")) -> pd.DataFrame:
+def load_judicial_articles(source: str = "cnn") -> pd.DataFrame:
     """Load pre-filtered judicial articles or filter from raw data."""
     if source == "cnn":
-        judicial_file = data_dir / "judicial_articles.csv"
+        judicial_file = DATA_DIR / "judicial_articles.csv"
         if judicial_file.exists():
             print(f"Loading pre-filtered judicial articles from {judicial_file}")
             return pd.read_csv(judicial_file)
 
-    raw_file = data_dir / DATA_SOURCES[source].get("raw_file", "")
+    raw_file = DATA_DIR / DATA_SOURCES[source].get("raw_file", "")
     if raw_file.exists():
         print(f"Loading raw data from {raw_file} and filtering...")
         df = pd.read_csv(raw_file, compression="gzip")
@@ -167,7 +166,6 @@ def submit_batch(
     source: str = "cnn",
     stage: int = 1,
     limit: int | None = None,
-    data_dir: Path = Path("."),
     decision_results_file: str | None = None,
 ) -> str:
     """Submit a batch job and return the batch ID."""
@@ -176,7 +174,7 @@ def submit_batch(
     print(f"{'='*60}\n")
 
     client = get_client()
-    df = load_judicial_articles(source, data_dir)
+    df = load_judicial_articles(source)
 
     if limit:
         df = df.head(limit)
@@ -510,14 +508,14 @@ def analyze_article(client: anthropic.Anthropic, article: dict) -> dict:
     return result
 
 
-def run_pilot(n: int = 5, data_dir: Path = Path(".")) -> list:
+def run_pilot(n: int = 5) -> list:
     """Run pilot analysis on n articles with full output for validation."""
     print(f"\n{'='*60}")
     print(f"PILOT RUN (SYNC MODE): Analyzing {n} articles")
     print(f"{'='*60}\n")
 
     client = get_client()
-    df = load_judicial_articles("cnn", data_dir)
+    df = load_judicial_articles("cnn")
 
     sample = df.sample(n=min(n, len(df)), random_state=42)
 
@@ -577,7 +575,6 @@ Workflow for batch processing:
     parser.add_argument("--pilot", type=int, help="Run pilot on N articles (sync mode)")
     parser.add_argument("--source", choices=["cnn", "fox", "msnbc", "nbc"], default="cnn")
     parser.add_argument("--limit", type=int, help="Limit number of articles")
-    parser.add_argument("--data-dir", type=Path, default=Path("."))
 
     parser.add_argument("--batch-submit", action="store_true", help="Submit a batch job")
     parser.add_argument("--stage", type=int, choices=[1, 2], default=1, help="Pipeline stage")
@@ -592,13 +589,12 @@ Workflow for batch processing:
     args = parser.parse_args()
 
     if args.pilot:
-        run_pilot(args.pilot, args.data_dir)
+        run_pilot(args.pilot)
     elif args.batch_submit:
         submit_batch(
             source=args.source,
             stage=args.stage,
             limit=args.limit,
-            data_dir=args.data_dir,
             decision_results_file=args.decision_results,
         )
     elif args.batch_status:

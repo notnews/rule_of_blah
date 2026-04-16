@@ -7,7 +7,7 @@ from collections import defaultdict
 
 import pandas as pd
 
-from config import RESULTS_DIR, verify_quote
+from config import DATA_DIR, RESULTS_DIR, verify_quote
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -240,7 +240,7 @@ def load_data() -> tuple[list, list, dict]:
     with open(RESULTS_DIR / "cnn_stage2_results.json") as f:
         stage2 = json.load(f)
 
-    df = pd.read_csv("judicial_articles.csv")
+    df = pd.read_csv(DATA_DIR / "judicial_articles.csv")
     articles = {f"row_{i}": row for i, row in df.iterrows()}
 
     return stage1, stage2, articles

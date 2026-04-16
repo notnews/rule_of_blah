@@ -1,0 +1,79 @@
+======================================================================
+LLM ANALYSIS OF JUDICIAL APPOINTMENT MENTIONS IN CNN COVERAGE
+======================================================================
+
+DATA SOURCE
+----------------------------------------
+Source: CNN transcripts (cnn-8.csv)
+Period: 2022-2025
+Total articles filtered for judicial content: 2,542
+
+STAGE 1: DECISION DETECTION
+----------------------------------------
+Articles covering court decisions: 565 (22.2%)
+
+Decision types:
+  Supreme Court only:  361 (63.9%)
+  Circuit Court only:  187 (33.1%)
+  Both:                9 (1.6%)
+
+STAGE 2: APPOINTMENT MENTION DETECTION
+----------------------------------------
+Articles with appointment mentions: 281 (49.7% of decision articles)
+
+Mention types (total counts):
+  Explicit ('appointed by X'):     354 (40.0%)
+  Implicit ('conservative court'): 482 (54.5%)
+  Party-based ('GOP-appointed'):   49 (5.5%)
+  Total mentions:                  885
+
+President attribution:
+  Trump         379 (42.8%)
+  unknown       363 (41.0%)
+  Biden          43 (4.9%)
+  Bush           36 (4.1%)
+  Obama          33 (3.7%)
+  Reagan         20 (2.3%)
+  Clinton        10 (1.1%)
+
+QUOTE VERIFICATION
+----------------------------------------
+Quotes verified against source: 865/888 (97.4%)
+
+TOP CASES COVERED
+----------------------------------------
+  Roe v. Wade: 82
+  Dobbs: 8
+  Dobbs v. Jackson Women's Health Organization: 3
+  Roe v. Wade (Dobbs decision): 3
+  Dobbs (overturning Roe v. Wade): 2
+  Dobbs decision: 2
+  Gonzalez v. Google: 2
+  Richard Glossip case: 2
+  Colorado 14th Amendment case: 2
+  Trump v. the United States: 2
+
+COMPARISON WITH REGEX APPROACH
+----------------------------------------
+Regex (from notebook):  170 articles with political context (5.7%)
+LLM approach:           281 articles with mentions (11.1%)
+Improvement: LLM captures implicit references regex misses
+
+======================================================================
+KEY FINDINGS
+======================================================================
+
+1. Nearly half (49.7%) of CNN articles covering court decisions
+   mention who appointed the judges involved.
+
+2. Implicit mentions (54.5%) outnumber explicit mentions (40.0%),
+   showing the importance of LLM-based detection over regex.
+
+3. Trump appointees are mentioned most frequently (42.7% of all
+   president mentions), reflecting coverage of the conservative
+   Supreme Court majority he established.
+
+4. Quote verification rate is high (~87%), indicating the LLM
+   is providing grounded evidence from the articles.
+
+======================================================================
