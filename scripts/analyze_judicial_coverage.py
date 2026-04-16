@@ -38,49 +38,18 @@ def get_client() -> anthropic.Anthropic:
 
 
 def load_judicial_articles(source: str = "cnn") -> pd.DataFrame:
-    """Load pre-filtered judicial articles or filter from raw data."""
-    if source == "cnn":
-        judicial_file = DATA_DIR / "judicial_articles.csv"
+    """Load pre-filtered judicial articles."""
+    # Try source-specific file first, then generic name
+    for filename in [f"{source}_judicial_articles.csv", "judicial_articles.csv"]:
+        judicial_file = DATA_DIR / filename
         if judicial_file.exists():
-            print(f"Loading pre-filtered judicial articles from {judicial_file}")
+            print(f"Loading judicial articles from {judicial_file}")
             return pd.read_csv(judicial_file)
 
-    raw_file = DATA_DIR / DATA_SOURCES[source].get("raw_file", "")
-    if raw_file.exists():
-        print(f"Loading raw data from {raw_file} and filtering...")
-        df = pd.read_csv(raw_file, compression="gzip")
-        return filter_federal_judge_articles(df)
-
     raise FileNotFoundError(
-        f"Data not found for {source}. Download from: {DATA_SOURCES[source]['dataverse_url']}"
+        f"No filtered data found for {source}. Run filter_data.py first.\n"
+        f"Download raw data from: {DATA_SOURCES[source]['dataverse_url']}"
     )
-
-
-def filter_federal_judge_articles(df: pd.DataFrame, text_column: str = "text") -> pd.DataFrame:
-    """Filter articles mentioning federal judges."""
-    federal_judge_patterns = [
-        r"\b(Supreme Court\s+Justice(s)?)\b",
-        r"\b(Supreme Court\s+Judge(s)?)\b",
-        r"\b(Circuit Court\s+Judge(s)?)\b",
-        r"\b(Appellate Court\s+Judge(s)?)\b",
-        r"\b(Federal\s+Appellate\s+Judge(s)?)\b",
-        r"\b(District Court\s+Judge(s)?)\b",
-        r"\b(Federal\s+District\s+Judge(s)?)\b",
-        r"\b(Court of International Trade\s+Judge(s)?)\b",
-        r"\b(Court of Federal Claims\s+Judge(s)?)\b",
-        r"\b(Bankruptcy\s+Judge(s)?)\b",
-        r"\b(Magistrate\s+Judge(s)?)\b",
-    ]
-
-    compiled_patterns = [re.compile(p, re.IGNORECASE) for p in federal_judge_patterns]
-
-    def has_federal_judge_mention(text: str) -> bool:
-        if not isinstance(text, str):
-            return False
-        return any(p.search(text) for p in compiled_patterns)
-
-    mask = df[text_column].apply(has_federal_judge_mention)
-    return pd.DataFrame(df[mask].copy())
 
 
 def truncate_text(text: str, max_chars: int = 100000) -> str:

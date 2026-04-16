@@ -37,14 +37,13 @@ How often does news media mention who appointed judges when covering court decis
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     DATA PREPARATION                            │
+│  STEP 0: FILTER DATA                          (filter_data.py) │
 │  Download transcripts from Dataverse → Filter for judge mentions│
-│  (judicial_filter.ipynb)                                        │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  STAGE 1: DECISION DETECTION                    │
+│  STEP 1: DECISION DETECTION      (analyze_judicial_coverage.py)│
 │  LLM classifies each article:                                   │
 │  • Does it cover an actual court decision?                      │
 │  • Supreme Court or Circuit Court?                              │
@@ -53,7 +52,7 @@ How often does news media mention who appointed judges when covering court decis
                               │
                               ▼ (only articles with decisions)
 ┌─────────────────────────────────────────────────────────────────┐
-│              STAGE 2: APPOINTMENT MENTION DETECTION             │
+│  STEP 2: APPOINTMENT DETECTION   (analyze_judicial_coverage.py)│
 │  LLM extracts all mentions of who appointed judges:             │
 │  • Explicit: "appointed by President Trump"                     │
 │  • Implicit: "conservative majority"                            │
@@ -63,7 +62,7 @@ How often does news media mention who appointed judges when covering court decis
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      RESULTS & REPORT                           │
+│  STEP 3: GENERATE REPORT                   (generate_report.py)│
 │  Merge stages → Generate HTML report with statistics            │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -75,11 +74,11 @@ Uses Anthropic's Batch API for 50% cost reduction.
 ```
 rule_of_blah/
 ├── scripts/
-│   ├── analyze_judicial_coverage.py  # Main analysis pipeline
+│   ├── filter_data.py                # Step 0: Filter raw data for judge mentions
+│   ├── analyze_judicial_coverage.py  # Steps 1-2: LLM analysis pipeline
+│   ├── generate_report.py            # Step 3: Generate HTML report
 │   ├── config.py                     # Shared configuration
-│   ├── prompts.py                    # LLM prompt templates
-│   ├── generate_report.py            # HTML report generator
-│   └── judicial_filter.ipynb         # Initial filtering notebook
+│   └── prompts.py                    # LLM prompt templates
 ├── data/
 │   └── judicial_articles.csv         # Pre-filtered articles (gitignored)
 ├── results/
@@ -110,41 +109,41 @@ uv sync
 export ANTHROPIC_API_KEY="your-key-here"
 ```
 
-### Quick Test (Synchronous)
+### Full Pipeline
 
 ```bash
-uv run python scripts/analyze_judicial_coverage.py --pilot 5
-```
+# Step 0: Filter raw data (download from Dataverse first)
+uv run python scripts/filter_data.py --source cnn --raw-file data/cnn-8.csv.gz
 
-### Full Pipeline (Batch API)
-
-```bash
-# Stage 1: Detect which articles cover court decisions
+# Step 1: Submit decision detection batch
 uv run python scripts/analyze_judicial_coverage.py --batch-submit --source cnn --stage 1
 
 # Check status (batches complete within hours)
 uv run python scripts/analyze_judicial_coverage.py --batch-status BATCH_ID
 
-# Retrieve stage 1 results
+# Retrieve step 1 results
 uv run python scripts/analyze_judicial_coverage.py --batch-retrieve BATCH_ID --source cnn --stage 1 \
-    --articles data/judicial_articles.csv
+    --articles data/cnn_judicial_articles.csv
 
-# Stage 2: Extract appointment mentions from decision articles
+# Step 2: Submit appointment detection batch
 uv run python scripts/analyze_judicial_coverage.py --batch-submit --source cnn --stage 2 \
     --decision-results results/cnn_stage1_results.json
 
-# Retrieve stage 2 results
+# Retrieve step 2 results
 uv run python scripts/analyze_judicial_coverage.py --batch-retrieve BATCH_ID --source cnn --stage 2 \
-    --articles data/judicial_articles.csv
+    --articles data/cnn_judicial_articles.csv
 
-# Merge and summarize
+# Merge results
 uv run python scripts/analyze_judicial_coverage.py --merge --source cnn
+
+# Step 3: Generate report
+uv run python scripts/generate_report.py
 ```
 
-### Generate Report
+### Quick Test (Synchronous)
 
 ```bash
-uv run python scripts/generate_report.py
+uv run python scripts/analyze_judicial_coverage.py --pilot 5
 ```
 
 ## Results
