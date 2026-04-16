@@ -4,86 +4,12 @@
 import json
 import webbrowser
 from collections import defaultdict
-from pathlib import Path
 
 import pandas as pd
 
-RESULTS_DIR = Path("results")
+from config import RESULTS_DIR, verify_quote
 
-
-def load_data():
-    """Load analysis results and article data."""
-    with open(RESULTS_DIR / "cnn_stage1_results.json") as f:
-        stage1 = json.load(f)
-
-    with open(RESULTS_DIR / "cnn_stage2_results.json") as f:
-        stage2 = json.load(f)
-
-    df = pd.read_csv("judicial_articles.csv")
-    articles = {f"row_{i}": row for i, row in df.iterrows()}
-
-    return stage1, stage2, articles
-
-
-def verify_quote(quote: str, text: str) -> bool:
-    """Check if quote exists in article text."""
-    if not quote or not text:
-        return False
-    norm_quote = " ".join(quote.lower().split())
-    norm_text = " ".join(str(text).lower().split())
-    return norm_quote in norm_text
-
-
-def generate_html(stage1, stage2, articles):
-    """Generate HTML report."""
-    # Calculate statistics
-    total = len(stage1)
-    decisions = [r for r in stage1 if r.get("covers_court_decision")]
-    mentions_articles = [r for r in stage2 if r.get("has_appointment_mentions")]
-
-    # Decision types
-    sc = sum(1 for r in decisions if r.get("decision_type") == "supreme_court")
-    cc = sum(1 for r in decisions if r.get("decision_type") == "circuit_court")
-
-    # Mention types
-    explicit = sum(r.get("explicit_mentions", 0) for r in stage2)
-    implicit = sum(r.get("implicit_mentions", 0) for r in stage2)
-    party = sum(r.get("party_mentions", 0) for r in stage2)
-    total_mentions = explicit + implicit + party
-
-    # President counts
-    presidents = defaultdict(int)
-    for r in stage2:
-        for m in r.get("mentions", []):
-            presidents[m.get("president", "unknown")] += 1
-
-    # Top cases
-    cases = defaultdict(int)
-    for r in stage1:
-        if r.get("case_name"):
-            cases[r["case_name"]] += 1
-
-    # Collect sample quotes with verification
-    sample_quotes = []
-    for r in stage2:
-        uid = r.get("uid")
-        article = articles.get(uid, {})
-        text = str(article.get("text", ""))
-
-        for m in r.get("mentions", []):
-            quote = m.get("quote", "")
-            if quote and len(sample_quotes) < 50:
-                verified = verify_quote(quote, text)
-                sample_quotes.append({
-                    "quote": quote,
-                    "type": m.get("type", "unknown"),
-                    "president": m.get("president", "unknown"),
-                    "judge": m.get("judge_name"),
-                    "context": m.get("context", ""),
-                    "verified": verified,
-                })
-
-    html = f"""<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -220,7 +146,7 @@ def generate_html(stage1, stage2, articles):
 </head>
 <body>
     <h1>Judicial Appointment Mentions in CNN Coverage</h1>
-    <p class="subtitle">LLM Analysis of 2,542 CNN Transcripts (2022-2025)</p>
+    <p class="subtitle">LLM Analysis of {total:,} CNN Transcripts (2022-2025)</p>
 
     <h2>Summary Statistics</h2>
     <div class="stats-grid">
@@ -230,14 +156,14 @@ def generate_html(stage1, stage2, articles):
             <div class="stat-sublabel">Filtered for court mentions</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{len(decisions):,}</div>
+            <div class="stat-number">{num_decisions:,}</div>
             <div class="stat-label">Cover Decisions</div>
-            <div class="stat-sublabel">{100*len(decisions)/total:.1f}% of articles</div>
+            <div class="stat-sublabel">{pct_decisions:.1f}% of articles</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{len(mentions_articles):,}</div>
+            <div class="stat-number">{num_mentions:,}</div>
             <div class="stat-label">Mention Appointments</div>
-            <div class="stat-sublabel">{100*len(mentions_articles)/len(decisions):.1f}% of decision articles</div>
+            <div class="stat-sublabel">{pct_mentions:.1f}% of decision articles</div>
         </div>
         <div class="stat-card">
             <div class="stat-number">{total_mentions:,}</div>
@@ -250,11 +176,11 @@ def generate_html(stage1, stage2, articles):
     <div class="bar-chart">
         <div class="bar">
             <span class="bar-label">Supreme Court</span>
-            <div class="bar-fill" style="width: {100*sc/len(decisions)}%">{sc} ({100*sc/len(decisions):.1f}%)</div>
+            <div class="bar-fill" style="width: {pct_sc}%">{sc} ({pct_sc:.1f}%)</div>
         </div>
         <div class="bar">
             <span class="bar-label">Circuit Court</span>
-            <div class="bar-fill" style="width: {100*cc/len(decisions)}%">{cc} ({100*cc/len(decisions):.1f}%)</div>
+            <div class="bar-fill" style="width: {pct_cc}%">{cc} ({pct_cc:.1f}%)</div>
         </div>
     </div>
 
@@ -262,76 +188,32 @@ def generate_html(stage1, stage2, articles):
     <div class="bar-chart">
         <div class="bar">
             <span class="bar-label">Implicit</span>
-            <div class="bar-fill" style="width: {100*implicit/total_mentions}%">{implicit} ({100*implicit/total_mentions:.1f}%)</div>
+            <div class="bar-fill" style="width: {pct_implicit}%">{implicit} ({pct_implicit:.1f}%)</div>
         </div>
         <div class="bar">
             <span class="bar-label">Explicit</span>
-            <div class="bar-fill" style="width: {100*explicit/total_mentions}%">{explicit} ({100*explicit/total_mentions:.1f}%)</div>
+            <div class="bar-fill" style="width: {pct_explicit}%">{explicit} ({pct_explicit:.1f}%)</div>
         </div>
         <div class="bar">
             <span class="bar-label">Party-based</span>
-            <div class="bar-fill" style="width: {100*party/total_mentions}%">{party} ({100*party/total_mentions:.1f}%)</div>
+            <div class="bar-fill" style="width: {pct_party}%">{party} ({pct_party:.1f}%)</div>
         </div>
     </div>
 
     <h2>President Mentions</h2>
     <div class="bar-chart">
-"""
-
-    # Add president bars
-    sorted_pres = sorted(presidents.items(), key=lambda x: -x[1])
-    max_count = sorted_pres[0][1] if sorted_pres else 1
-    for pres, count in sorted_pres[:7]:
-        pct = 100 * count / total_mentions
-        width = 100 * count / max_count
-        html += f"""        <div class="bar">
-            <span class="bar-label">{pres}</span>
-            <div class="bar-fill" style="width: {width}%">{count} ({pct:.1f}%)</div>
-        </div>
-"""
-
-    html += """    </div>
+{president_bars}
+    </div>
 
     <h2>Sample Quotes</h2>
     <div class="quotes-section">
-"""
-
-    # Add sample quotes
-    for q in sample_quotes[:30]:
-        type_class = q["type"]
-        badge_class = f"badge-{q['type']}"
-        verified_badge = "badge-verified" if q["verified"] else "badge-unverified"
-        verified_text = "Verified" if q["verified"] else "Unverified"
-
-        html += f"""        <div class="quote-card {type_class}">
-            <div class="quote-text">"{q['quote']}"</div>
-            <div class="quote-meta">
-                <span class="badge {badge_class}">{q['type'].capitalize()}</span>
-                <span class="badge badge-president">{q['president']}</span>
-                <span class="badge {verified_badge}">{verified_text}</span>
-"""
-        if q["judge"]:
-            html += f"""                <span class="badge" style="background:#e0e0e0">Judge: {q['judge']}</span>
-"""
-        html += """            </div>
-        </div>
-"""
-
-    html += """    </div>
+{quote_cards}
+    </div>
 
     <h2>Top Cases Covered</h2>
     <div class="cases-list">
-"""
-
-    # Add top cases
-    for case, count in sorted(cases.items(), key=lambda x: -x[1])[:10]:
-        html += f"""        <div class="case-item">
-            <span class="case-name">{case}</span>
-            <span class="case-count">{count} articles</span>
-        </div>
-"""
-
-    html += f"""    </div>
+{case_items}
+    </div>
 
     <div class="methodology">
         <h3>Methodology</h3>
@@ -342,16 +224,142 @@ def generate_html(stage1, stage2, articles):
             <li><strong>Implicit:</strong> "conservative majority", "Trump-era court"</li>
             <li><strong>Party-based:</strong> "GOP-appointed judges", "Republican nominees"</li>
         </ul>
-        <p><strong>Quote Verification:</strong> {sum(1 for q in sample_quotes if q['verified'])}/{len(sample_quotes)} sample quotes verified against source text ({100*sum(1 for q in sample_quotes if q['verified'])/len(sample_quotes):.0f}%)</p>
+        <p><strong>Quote Verification:</strong> {verified_count}/{quote_count} sample quotes verified against source text ({verification_pct:.0f}%)</p>
         <p><strong>Model:</strong> Claude Sonnet (claude-sonnet-4-20250514) via Anthropic Batch API</p>
     </div>
 </body>
 </html>
 """
-    return html
 
 
-def main():
+def load_data() -> tuple[list, list, dict]:
+    """Load analysis results and article data."""
+    with open(RESULTS_DIR / "cnn_stage1_results.json") as f:
+        stage1 = json.load(f)
+
+    with open(RESULTS_DIR / "cnn_stage2_results.json") as f:
+        stage2 = json.load(f)
+
+    df = pd.read_csv("judicial_articles.csv")
+    articles = {f"row_{i}": row for i, row in df.iterrows()}
+
+    return stage1, stage2, articles
+
+
+def collect_sample_quotes(stage2: list, articles: dict, limit: int = 50) -> list[dict]:
+    """Collect sample quotes with verification."""
+    sample_quotes = []
+    for r in stage2:
+        uid = r.get("uid")
+        article = articles.get(uid, {})
+        text = str(article.get("text", ""))
+
+        for m in r.get("mentions", []):
+            quote = m.get("quote", "")
+            if quote and len(sample_quotes) < limit:
+                sample_quotes.append({
+                    "quote": quote,
+                    "type": m.get("type", "unknown"),
+                    "president": m.get("president", "unknown"),
+                    "judge": m.get("judge_name"),
+                    "context": m.get("context", ""),
+                    "verified": verify_quote(quote, text),
+                })
+    return sample_quotes
+
+
+def generate_html(stage1: list, stage2: list, articles: dict) -> str:
+    """Generate HTML report."""
+    total = len(stage1)
+    decisions = [r for r in stage1 if r.get("covers_court_decision")]
+    mentions_articles = [r for r in stage2 if r.get("has_appointment_mentions")]
+
+    sc = sum(1 for r in decisions if r.get("decision_type") == "supreme_court")
+    cc = sum(1 for r in decisions if r.get("decision_type") == "circuit_court")
+
+    explicit = sum(r.get("explicit_mentions", 0) for r in stage2)
+    implicit = sum(r.get("implicit_mentions", 0) for r in stage2)
+    party = sum(r.get("party_mentions", 0) for r in stage2)
+    total_mentions = explicit + implicit + party
+
+    presidents: dict[str, int] = defaultdict(int)
+    for r in stage2:
+        for m in r.get("mentions", []):
+            presidents[m.get("president", "unknown")] += 1
+
+    cases: dict[str, int] = defaultdict(int)
+    for r in stage1:
+        if r.get("case_name"):
+            cases[r["case_name"]] += 1
+
+    sample_quotes = collect_sample_quotes(stage2, articles)
+
+    sorted_pres = sorted(presidents.items(), key=lambda x: -x[1])
+    max_count = sorted_pres[0][1] if sorted_pres else 1
+    president_bars = ""
+    for pres, count in sorted_pres[:7]:
+        pct = 100 * count / total_mentions
+        width = 100 * count / max_count
+        president_bars += f"""        <div class="bar">
+            <span class="bar-label">{pres}</span>
+            <div class="bar-fill" style="width: {width}%">{count} ({pct:.1f}%)</div>
+        </div>
+"""
+
+    quote_cards = ""
+    for q in sample_quotes[:30]:
+        verified_badge = "badge-verified" if q["verified"] else "badge-unverified"
+        verified_text = "Verified" if q["verified"] else "Unverified"
+        judge_badge = f'<span class="badge" style="background:#e0e0e0">Judge: {q["judge"]}</span>' if q["judge"] else ""
+
+        quote_cards += f"""        <div class="quote-card {q['type']}">
+            <div class="quote-text">"{q['quote']}"</div>
+            <div class="quote-meta">
+                <span class="badge badge-{q['type']}">{q['type'].capitalize()}</span>
+                <span class="badge badge-president">{q['president']}</span>
+                <span class="badge {verified_badge}">{verified_text}</span>
+                {judge_badge}
+            </div>
+        </div>
+"""
+
+    case_items = ""
+    for case, count in sorted(cases.items(), key=lambda x: -x[1])[:10]:
+        case_items += f"""        <div class="case-item">
+            <span class="case-name">{case}</span>
+            <span class="case-count">{count} articles</span>
+        </div>
+"""
+
+    verified_count = sum(1 for q in sample_quotes if q["verified"])
+
+    return HTML_TEMPLATE.format(
+        total=total,
+        num_decisions=len(decisions),
+        pct_decisions=100 * len(decisions) / total,
+        num_mentions=len(mentions_articles),
+        pct_mentions=100 * len(mentions_articles) / len(decisions),
+        total_mentions=total_mentions,
+        sc=sc,
+        pct_sc=100 * sc / len(decisions),
+        cc=cc,
+        pct_cc=100 * cc / len(decisions),
+        explicit=explicit,
+        pct_explicit=100 * explicit / total_mentions,
+        implicit=implicit,
+        pct_implicit=100 * implicit / total_mentions,
+        party=party,
+        pct_party=100 * party / total_mentions,
+        president_bars=president_bars,
+        quote_cards=quote_cards,
+        case_items=case_items,
+        verified_count=verified_count,
+        quote_count=len(sample_quotes),
+        verification_pct=100 * verified_count / len(sample_quotes) if sample_quotes else 0,
+    )
+
+
+def main() -> None:
     print("Loading data...")
     stage1, stage2, articles = load_data()
 

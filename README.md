@@ -55,6 +55,7 @@ Uses Anthropic's Message Batches API for 50% cost reduction compared to synchron
 ```
 rule_of_blah/
 ├── analyze_judicial_coverage.py  # Main analysis pipeline (batch API)
+├── config.py                     # Shared configuration and utilities
 ├── prompts.py                    # LLM prompt templates
 ├── generate_report.py            # HTML report generator
 ├── judicial_filter.ipynb         # Initial filtering notebook
