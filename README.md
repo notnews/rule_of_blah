@@ -149,6 +149,6 @@ uv run python scripts/generate_report.py
 
 ## Results
 
-- [Interactive HTML Report](results/cnn_report.html)
+- [Interactive HTML Report](https://htmlpreview.github.io/?https://github.com/soodoku/rule_of_blah/blob/main/results/cnn_report.html)
 - [Full Results JSON](results/cnn_final_results.json)
 - [Summary Statistics](results/cnn_analysis_report.txt)
