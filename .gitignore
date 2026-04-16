@@ -173,3 +173,10 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 *.gz
+
+# Data files
+*.csv
+judicial_articles.csv
+
+# Results
+results/

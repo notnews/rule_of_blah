@@ -1,0 +1,43 @@
+[project]
+name = "rule-of-blah"
+version = "0.1.0"
+description = "Analyzing how often news media mentions who appointed judges when covering court decisions"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "Gaurav Sood" }
+]
+keywords = [
+    "judicial",
+    "media",
+    "nlp",
+    "llm",
+    "political-science",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "anthropic>=0.30.0",
+    "pandas>=2.0.0",
+    "tqdm>=4.60.0",
+]
+
+[project.urls]
+Repository = "https://github.com/soodoku/rule_of_blah"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = false
