@@ -1,24 +1,12 @@
 ## The Rule of Blah
 
-In its classical formulation, the rule of law demands that legal outcomes be determined by neutral application of declared rules, not by the arbitrary whims or political affiliations of decision‑makers. Impartiality and consistency lie at its core: as Dicey put it, "no man is punishable or can lawfully be made to suffer in body or goods except for a distinct breach of law established in the ordinary legal manner before the ordinary courts of the land" (A.V. Dicey, Introduction to the Study of the Law of the Constitution, 1885). If judges' decisions systematically vary with their partisan backgrounds, then predictability—and public confidence in equal treatment—erodes.
+The classical rule of law demands that legal outcomes track declared rules rather than the political commitments of whoever happens to be on the bench. Dicey's 1885 formulation still does the work: "no man is punishable or can lawfully be made to suffer in body or goods except for a distinct breach of law established in the ordinary legal manner before the ordinary courts of the land." Neutrality and consistency are the ideal. When judges' votes correlate systematically with the party of the president who appointed them, the ideal erodes, and so does public confidence that like cases will be treated alike.
 
-Empirical evidence leaves little doubt that partisanship shapes judicial outcomes even in "rule‑bound" contexts. At the Supreme Court level, Segal & Spaeth's influential attitudinal model shows that justices' votes correlate strongly with their perceived policy preferences, explaining roughly two‑thirds of ideological variance in civil‑liberties cases purely by their Segal–Cover scores (r²≈0.64). That finding implies that legal reasoning often bows to personal ideology, undercutting the ideal of neutral rule‑application.
+The empirical record leaves little room for the fiction that judging is pure law-application. Segal and Spaeth's attitudinal model shows that Supreme Court justices' votes track their pre-confirmation ideological scores closely enough to explain roughly two-thirds of the variance in civil-liberties cases. The pattern runs down the federal hierarchy. Studies of federal sentencing after *United States v. Booker* find that Republican-appointed district judges impose meaningfully longer sentences than Democratic-appointed peers, with larger gaps for Black defendants. Analyses of hundreds of thousands of circuit-court dispositions find that panels with more Republican appointees are less likely to rule for the weaker party in cases involving civil plaintiffs, immigrants, and workers. Judge fixed effects rule out court-level confounders. Two citizens with identical cases can reasonably expect different outcomes depending on who drew what judge.
 
-In the lower courts, the pattern persists. A Harvard study of federal sentencing before and after United States v. Booker finds that judges appointed by Republican presidents impose sentences three months longer on average than their Democratic counterparts—and that Republican‑appointed judges give significantly harsher terms to Black defendants, even controlling for offense and criminal‑history scores . More recently, Schanzenbach & Tiller link over half a million federal sentencing records to individual judge identities, demonstrating that Republican‑appointed judges consistently impose longer sentences than Democratic‑appointed peers, with judge‑fixed effects ruling out court‑level confounders.
+Against that backdrop, how news outlets describe judges matters. A story that reports a ruling without noting the bench's partisan composition invites readers to treat the ruling as neutral legal output. A story that foregrounds who appointed whom invites the opposite reading, that courts are extensions of the political branches by other means. Both framings shape what a ruling is taken to mean, and neither is inert color commentary.
 
-These systematic divergences conflict with the rule‑of‑law ideal: if two citizens commit identical offenses but face different sentences based solely on the appointing president's party, then equality before the law is compromised. And it isn't limited to criminal sentencing. Alma Cohen's analysis of 670,000 Circuit Court cases finds that panels with more Republican‑appointed judges are measurably less likely to side with the "weaker" party (e.g., civil plaintiffs vs. government, immigrants vs. agency) even in non‑controversial domains.
-
-Given this empirical backdrop, it's natural to ask: how often does the news media flag the appointing president's party when reporting on judicial decisions? If media outlets seldom mention partisanship, the public may wrongly assume that judges decide solely on law. Conversely, frequent partisan attributions could reflect—and reinforce—a growing skepticism about judicial impartiality, itself a symptom of rule‑of‑law erosion.
-
-A media analysis can therefore serve two purposes. First, it measures public discourse around judicial impartiality: how aware are readers that party‑affiliation shapes outcomes? Second, it provides a barometer of institutional legitimacy—if mainstream outlets routinely couch decisions in partisan terms, that signals an expectation that lawmaking is inherently political.
-
-To motivate your corpus study, note that prior research on media framing (e.g. Cohen & Davis, 2016) shows that attributing judicial behavior to party can increase public cynicism and reduce perceived legitimacy of court rulings. By quantifying the frequency and context of partisan mentions—stratified by outlet, case type, and ideological salience—you can trace how media coverage interacts with empirical realities of judicial behavior.
-
-In sum, the media's invocation of a judge's partisan pedigree is not neutral "color commentary," but a lens on the health of the rule of law. When reporting neglects to note the strong empirical link between affiliation and outcomes, it perpetuates the myth of purely legal adjudication; when it over‑emphasizes partisanship, it fuels public distrust. Your analysis will thus shed light on the uneasy balance between legal ideal and political reality in both courtrooms and newsrooms.
-
-## Research Question
-
-How often does news media mention who appointed judges when covering court decisions?
+This project measures one slice of that framing. When a cable news segment covers an actual federal court decision, how often does the coverage mention who appointed the judges? When it does, is the appointment attributed to a specific president, to a party ("GOP-appointed"), or only indirectly through ideological labels like "the conservative majority"? The answers trace the implicit theory of judging that one outlet's coverage conveys, aggregated across thousands of segments.
 
 ## Key Findings (CNN 2022-2025)
 
@@ -33,17 +21,19 @@ How often does news media mention who appointed judges when covering court decis
 | Trump appointees mentioned | 379 (43% of all mentions) |
 | Quote verification rate | 97% |
 
-## Pipeline Overview
+Roughly one in five judicial segments on CNN between 2022 and 2025 covered an actual ruling, and of those, half mentioned who appointed the judges. Implicit ideological framing ("conservative majority," "liberal justices") dominated over explicit presidential attribution, and explicit attribution dominated over party framing. Trump appointees accounted for 43 percent of all mentions, reflecting both the salience of the Dobbs-era court and the tendency of coverage to personalize the bench around the appointing president.
+
+## Pipeline
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  STEP 0: FILTER DATA                          (filter_data.py) │
+│  STEP 0: FILTER DATA                          (filter_data.py)  │
 │  Download transcripts from Dataverse → Filter for judge mentions│
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  STEP 1: DECISION DETECTION      (analyze_judicial_coverage.py)│
+│  STEP 1: DECISION DETECTION      (analyze_judicial_coverage.py) │
 │  LLM classifies each article:                                   │
 │  • Does it cover an actual court decision?                      │
 │  • Supreme Court or Circuit Court?                              │
@@ -52,7 +42,7 @@ How often does news media mention who appointed judges when covering court decis
                               │
                               ▼ (only articles with decisions)
 ┌─────────────────────────────────────────────────────────────────┐
-│  STEP 2: APPOINTMENT DETECTION   (analyze_judicial_coverage.py)│
+│  STEP 2: APPOINTMENT DETECTION   (analyze_judicial_coverage.py) │
 │  LLM extracts all mentions of who appointed judges:             │
 │  • Explicit: "appointed by President Trump"                     │
 │  • Implicit: "conservative majority"                            │
@@ -62,12 +52,12 @@ How often does news media mention who appointed judges when covering court decis
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  STEP 3: GENERATE REPORT                   (generate_report.py)│
+│  STEP 3: GENERATE REPORT                    (generate_report.py)│
 │  Merge stages → Generate HTML report with statistics            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Uses Anthropic's Batch API for 50% cost reduction.
+Stage 1 and stage 2 run through Anthropic's Batch API for a 50 percent cost reduction. Each extracted quote is verified against the source transcript, and 97 percent of quotes in the final report match verbatim.
 
 ## Repository Layout
 
@@ -100,6 +90,8 @@ rule_of_blah/
 | Fox News | https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/Q2KIES |
 | MSNBC | https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/UPJDE1 |
 | NBC | http://dx.doi.org/10.7910/DVN/ND1TCV |
+
+Results reported here are CNN only. Extending to the other three networks is a matter of running the same pipeline against the corresponding Dataverse archives.
 
 ## Usage
 
