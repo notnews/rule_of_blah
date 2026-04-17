@@ -74,7 +74,8 @@ Uses Anthropic's Batch API for 50% cost reduction.
 ```
 rule_of_blah/
 ├── scripts/
-│   ├── filter_data.py                # Step 0: Filter raw data for judge mentions
+│   ├── discover_patterns.py          # Analyze transcripts for pattern discovery
+│   ├── filter_data.py                # Step 0: Filter + sample raw data
 │   ├── analyze_judicial_coverage.py  # Steps 1-2: LLM analysis pipeline
 │   ├── generate_report.py            # Step 3: Generate HTML report
 │   ├── config.py                     # Shared configuration
@@ -112,8 +113,11 @@ export ANTHROPIC_API_KEY="your-key-here"
 ### Full Pipeline
 
 ```bash
-# Step 0: Filter raw data (download from Dataverse first)
-uv run python scripts/filter_data.py --source cnn --raw-file data/cnn-8.csv.gz
+# Optional: Discover patterns in raw data
+uv run python scripts/discover_patterns.py --raw-file data/cnn-8.csv.gz --sample 1000
+
+# Step 0: Filter + sample raw data (download from Dataverse first)
+uv run python scripts/filter_data.py --source cnn --raw-file data/cnn-8.csv.gz --sample 500 --seed 42
 
 # Step 1: Submit decision detection batch
 uv run python scripts/analyze_judicial_coverage.py --batch-submit --source cnn --stage 1

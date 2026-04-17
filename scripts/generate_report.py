@@ -91,8 +91,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background: #fafafa;
             border-radius: 0 8px 8px 0;
         }}
-        .quote-card.explicit {{ border-left-color: #28a745; }}
-        .quote-card.implicit {{ border-left-color: #ffc107; }}
+        .quote-card.president {{ border-left-color: #28a745; }}
+        .quote-card.ideological {{ border-left-color: #ffc107; }}
         .quote-card.party {{ border-left-color: #17a2b8; }}
 
         .quote-text {{
@@ -112,8 +112,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 0.8em;
             font-weight: 500;
         }}
-        .badge-explicit {{ background: #d4edda; color: #155724; }}
-        .badge-implicit {{ background: #fff3cd; color: #856404; }}
+        .badge-president {{ background: #d4edda; color: #155724; }}
+        .badge-ideological {{ background: #fff3cd; color: #856404; }}
         .badge-party {{ background: #d1ecf1; color: #0c5460; }}
         .badge-president {{ background: #e2e3e5; color: #383d41; }}
         .badge-verified {{ background: #cce5ff; color: #004085; }}
@@ -187,16 +187,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <h2>Mention Types</h2>
     <div class="bar-chart">
         <div class="bar">
-            <span class="bar-label">Implicit</span>
-            <div class="bar-fill" style="width: {pct_implicit}%">{implicit} ({pct_implicit:.1f}%)</div>
+            <span class="bar-label">President</span>
+            <div class="bar-fill" style="width: {pct_president}%">{president_count} ({pct_president:.1f}%)</div>
         </div>
         <div class="bar">
-            <span class="bar-label">Explicit</span>
-            <div class="bar-fill" style="width: {pct_explicit}%">{explicit} ({pct_explicit:.1f}%)</div>
-        </div>
-        <div class="bar">
-            <span class="bar-label">Party-based</span>
+            <span class="bar-label">Party</span>
             <div class="bar-fill" style="width: {pct_party}%">{party} ({pct_party:.1f}%)</div>
+        </div>
+        <div class="bar">
+            <span class="bar-label">Ideological</span>
+            <div class="bar-fill" style="width: {pct_ideological}%">{ideological} ({pct_ideological:.1f}%)</div>
         </div>
     </div>
 
@@ -205,7 +205,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 {president_bars}
     </div>
 
-    <h2>Sample Quotes</h2>
+    <h2>All Quotes ({quote_count} total)</h2>
     <div class="quotes-section">
 {quote_cards}
     </div>
@@ -246,26 +246,40 @@ def load_data() -> tuple[list, list, dict]:
     return stage1, stage2, articles
 
 
-def collect_sample_quotes(stage2: list, articles: dict, limit: int = 50) -> list[dict]:
-    """Collect sample quotes with verification."""
-    sample_quotes = []
+def collect_all_quotes(stage2: list, articles: dict) -> list[dict]:
+    """Collect all quotes with verification for audit."""
+    all_quotes = []
     for r in stage2:
         uid = r.get("uid")
         article = articles.get(uid, {})
         text = str(article.get("text", ""))
 
+        year = article.get("year")
+        month = article.get("month")
+        day = article.get("date")
+        if year and month and day:
+            date_str = f"{int(year)}-{int(month):02d}-{int(day):02d}"
+        else:
+            date_str = ""
+
         for m in r.get("mentions", []):
             quote = m.get("quote", "")
-            if quote and len(sample_quotes) < limit:
-                sample_quotes.append({
-                    "quote": quote,
-                    "type": m.get("type", "unknown"),
-                    "president": m.get("president", "unknown"),
-                    "judge": m.get("judge_name"),
-                    "context": m.get("context", ""),
-                    "verified": verify_quote(quote, text),
-                })
-    return sample_quotes
+            if quote:
+                all_quotes.append(
+                    {
+                        "uid": uid,
+                        "url": article.get("url", ""),
+                        "date": date_str,
+                        "program": article.get("program.name", ""),
+                        "quote": quote,
+                        "type": m.get("type", "unknown"),
+                        "president": m.get("president", "unknown"),
+                        "judge": m.get("judge_name"),
+                        "context": m.get("context", ""),
+                        "verified": verify_quote(quote, text),
+                    }
+                )
+    return all_quotes
 
 
 def generate_html(stage1: list, stage2: list, articles: dict) -> str:
@@ -277,10 +291,10 @@ def generate_html(stage1: list, stage2: list, articles: dict) -> str:
     sc = sum(1 for r in decisions if r.get("decision_type") == "supreme_court")
     cc = sum(1 for r in decisions if r.get("decision_type") == "circuit_court")
 
-    explicit = sum(r.get("explicit_mentions", 0) for r in stage2)
-    implicit = sum(r.get("implicit_mentions", 0) for r in stage2)
+    president_count = sum(r.get("president_mentions", 0) for r in stage2)
     party = sum(r.get("party_mentions", 0) for r in stage2)
-    total_mentions = explicit + implicit + party
+    ideological = sum(r.get("ideological_mentions", 0) for r in stage2)
+    total_mentions = president_count + party + ideological
 
     presidents: dict[str, int] = defaultdict(int)
     for r in stage2:
@@ -292,7 +306,7 @@ def generate_html(stage1: list, stage2: list, articles: dict) -> str:
         if r.get("case_name"):
             cases[r["case_name"]] += 1
 
-    sample_quotes = collect_sample_quotes(stage2, articles)
+    all_quotes = collect_all_quotes(stage2, articles)
 
     sorted_pres = sorted(presidents.items(), key=lambda x: -x[1])
     max_count = sorted_pres[0][1] if sorted_pres else 1
@@ -307,18 +321,40 @@ def generate_html(stage1: list, stage2: list, articles: dict) -> str:
 """
 
     quote_cards = ""
-    for q in sample_quotes[:30]:
+    for q in all_quotes:
         verified_badge = "badge-verified" if q["verified"] else "badge-unverified"
         verified_text = "Verified" if q["verified"] else "Unverified"
-        judge_badge = f'<span class="badge" style="background:#e0e0e0">Judge: {q["judge"]}</span>' if q["judge"] else ""
+        judge_badge = (
+            f'<span class="badge" style="background:#e0e0e0">Judge: {q["judge"]}</span>'
+            if q["judge"]
+            else ""
+        )
+        date_badge = (
+            f'<span class="badge" style="background:#f0f0f0">{q["date"]}</span>'
+            if q["date"]
+            else ""
+        )
+        program_badge = (
+            f'<span class="badge" style="background:#e8f4f8">{q["program"]}</span>'
+            if q["program"]
+            else ""
+        )
+        url_link = (
+            f'<a href="{q["url"]}" target="_blank" style="font-size:0.8em;color:#0066cc;">Transcript</a>'
+            if q["url"]
+            else ""
+        )
 
-        quote_cards += f"""        <div class="quote-card {q['type']}">
-            <div class="quote-text">"{q['quote']}"</div>
+        quote_cards += f"""        <div class="quote-card {q["type"]}">
+            <div class="quote-text">"{q["quote"]}"</div>
             <div class="quote-meta">
-                <span class="badge badge-{q['type']}">{q['type'].capitalize()}</span>
-                <span class="badge badge-president">{q['president']}</span>
+                <span class="badge badge-{q["type"]}">{q["type"].capitalize()}</span>
+                <span class="badge badge-president">{q["president"]}</span>
                 <span class="badge {verified_badge}">{verified_text}</span>
                 {judge_badge}
+                {date_badge}
+                {program_badge}
+                {url_link}
             </div>
         </div>
 """
@@ -331,7 +367,7 @@ def generate_html(stage1: list, stage2: list, articles: dict) -> str:
         </div>
 """
 
-    verified_count = sum(1 for q in sample_quotes if q["verified"])
+    verified_count = sum(1 for q in all_quotes if q["verified"])
 
     return HTML_TEMPLATE.format(
         total=total,
@@ -344,18 +380,18 @@ def generate_html(stage1: list, stage2: list, articles: dict) -> str:
         pct_sc=100 * sc / len(decisions),
         cc=cc,
         pct_cc=100 * cc / len(decisions),
-        explicit=explicit,
-        pct_explicit=100 * explicit / total_mentions,
-        implicit=implicit,
-        pct_implicit=100 * implicit / total_mentions,
+        president_count=president_count,
+        pct_president=100 * president_count / total_mentions,
+        ideological=ideological,
+        pct_ideological=100 * ideological / total_mentions,
         party=party,
         pct_party=100 * party / total_mentions,
         president_bars=president_bars,
         quote_cards=quote_cards,
         case_items=case_items,
         verified_count=verified_count,
-        quote_count=len(sample_quotes),
-        verification_pct=100 * verified_count / len(sample_quotes) if sample_quotes else 0,
+        quote_count=len(all_quotes),
+        verification_pct=100 * verified_count / len(all_quotes) if all_quotes else 0,
     )
 
 

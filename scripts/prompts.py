@@ -26,25 +26,27 @@ APPOINTMENT_DETECTION_PROMPT = """Analyze this news transcript for ALL mentions 
 ARTICLE:
 {text}
 
-Find ALL mentions (explicit or implicit) that indicate who appointed the judges/justices:
+Find ALL mentions that indicate who appointed the judges/justices. Categorize by what is explicitly named:
 
-EXPLICIT examples:
-- "appointed by President X"
-- "X's nominee"
-- "nominated by President X"
-- "X appointee"
-
-IMPLICIT examples:
-- "conservative majority" (implies Republican appointees)
-- "liberal justices" (implies Democratic appointees)
-- "Trump-era appointees"
+PRESIDENT (names a specific president):
+- "appointed by President Trump"
+- "Trump appointee"
+- "Trump-era judges"
+- "nominated by Obama"
 - "the three justices added by Trump"
-- "Obama's picks"
+- "Biden's pick"
 
-PARTY examples:
-- "GOP-nominated judges"
-- "Republican-appointed"
+PARTY (names party, but not a specific president):
+- "Republican-appointed judges"
+- "GOP nominees"
 - "Democrat-appointed"
+- "judges appointed by Democrats"
+
+IDEOLOGICAL (uses ideology, names neither president nor party - reader must infer):
+- "conservative majority"
+- "liberal justices"
+- "the court's right wing"
+- "originalist judges"
 
 Return JSON:
 {{
@@ -52,19 +54,22 @@ Return JSON:
   "mentions": [
     {{
       "quote": "EXACT text from article (copy verbatim)",
-      "type": "explicit" | "implicit" | "party",
+      "type": "president" | "party" | "ideological",
       "president": "Trump" | "Biden" | "Obama" | "Bush" | "Clinton" | "Reagan" | "Carter" | "unknown",
       "judge_name": "name if mentioned, else null",
       "context": "brief description of what this mention conveys"
     }}
   ],
-  "total_explicit_mentions": 0,
-  "total_implicit_mentions": 0,
-  "total_party_mentions": 0
+  "total_president_mentions": 0,
+  "total_party_mentions": 0,
+  "total_ideological_mentions": 0
 }}
 
 CRITICAL REQUIREMENTS:
 1. The "quote" field must contain text that appears EXACTLY in the article - do not paraphrase
 2. Include partial quotes if needed, but they must be verbatim
 3. If no appointment mentions exist, set has_appointment_mentions to false and mentions to []
-4. Be thorough - capture even subtle references to judicial appointments"""
+4. Be thorough - capture even subtle references to judicial appointments
+5. ONLY extract SPOKEN dialogue - NOT chyrons, graphics, or on-screen text
+6. Skip phrases that are ALL CAPS (these are typically chyrons/graphics, e.g., "SUPREME COURT NOMINEE")
+7. Quotes must be substantive - at least 20 characters of actual speech"""

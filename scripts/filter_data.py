@@ -5,8 +5,9 @@ Filter raw news transcripts for articles mentioning federal judges.
 This is the preprocessing step before LLM analysis.
 
 Usage:
-    python filter_data.py --source cnn
     python filter_data.py --source cnn --raw-file data/cnn-8.csv.gz
+    python filter_data.py --source cnn --raw-file data/cnn-8.csv.gz --sample 500
+    python filter_data.py --source cnn --raw-file data/cnn-8.csv.gz --sample 500 --seed 42
 """
 
 import argparse
@@ -31,6 +32,9 @@ FEDERAL_JUDGE_PATTERNS = [
     r"\b(Magistrate\s+Judge(s)?)\b",
 ]
 
+DEFAULT_SAMPLE_SIZE = 500
+DEFAULT_SEED = 42
+
 
 def filter_federal_judge_articles(df: pd.DataFrame, text_column: str = "text") -> pd.DataFrame:
     """Filter articles mentioning federal judges."""
@@ -50,7 +54,11 @@ def filter_federal_judge_articles(df: pd.DataFrame, text_column: str = "text") -
 def main() -> None:
     parser = argparse.ArgumentParser(description="Filter transcripts for federal judge mentions")
     parser.add_argument("--source", choices=["cnn", "fox", "msnbc", "nbc"], default="cnn")
-    parser.add_argument("--raw-file", type=str, help="Path to raw data file (overrides default)")
+    parser.add_argument("--raw-file", type=str, help="Path to raw data file")
+    parser.add_argument("--sample", type=int, default=None,
+                        help=f"Sample N articles after filtering (default: no sampling)")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED,
+                        help=f"Random seed for sampling (default: {DEFAULT_SEED})")
     args = parser.parse_args()
 
     source_config = DATA_SOURCES[args.source]
@@ -71,6 +79,10 @@ def main() -> None:
 
     filtered_df = filter_federal_judge_articles(df)
     print(f"Found {len(filtered_df):,} articles mentioning federal judges ({100*len(filtered_df)/len(df):.1f}%)")
+
+    if args.sample and args.sample < len(filtered_df):
+        filtered_df = filtered_df.sample(n=args.sample, random_state=args.seed)
+        print(f"Sampled {args.sample} articles (seed={args.seed})")
 
     output_file = DATA_DIR / f"{args.source}_judicial_articles.csv"
     filtered_df.to_csv(output_file, index=False)

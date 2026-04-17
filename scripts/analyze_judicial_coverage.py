@@ -285,8 +285,8 @@ def retrieve_batch_results(
                 "has_appointment_mentions": parsed.get("has_appointment_mentions", False),
                 "mentions": mentions,
                 "total_mentions": len(mentions),
-                "explicit_mentions": parsed.get("total_explicit_mentions", 0),
-                "implicit_mentions": parsed.get("total_implicit_mentions", 0),
+                "president_mentions": parsed.get("total_president_mentions", 0),
+                "ideological_mentions": parsed.get("total_ideological_mentions", 0),
                 "party_mentions": parsed.get("total_party_mentions", 0),
             }
             if parsed.get("error"):
@@ -335,8 +335,8 @@ def merge_results(source: str = "cnn") -> list:
                 "has_appointment_mentions": r2.get("has_appointment_mentions", False),
                 "mentions": r2.get("mentions", []),
                 "total_mentions": r2.get("total_mentions", 0),
-                "explicit_mentions": r2.get("explicit_mentions", 0),
-                "implicit_mentions": r2.get("implicit_mentions", 0),
+                "president_mentions": r2.get("president_mentions", 0),
+                "ideological_mentions": r2.get("ideological_mentions", 0),
                 "party_mentions": r2.get("party_mentions", 0),
             })
             if r2.get("stage2_error"):
@@ -403,12 +403,12 @@ def summarize_results(results: list, source: str) -> None:
 
     mention_articles = [r for r in results if r.get("has_appointment_mentions")]
     if mention_articles:
-        explicit = sum(r.get("explicit_mentions", 0) for r in mention_articles)
-        implicit = sum(r.get("implicit_mentions", 0) for r in mention_articles)
+        president = sum(r.get("president_mentions", 0) for r in mention_articles)
+        ideological = sum(r.get("ideological_mentions", 0) for r in mention_articles)
         party = sum(r.get("party_mentions", 0) for r in mention_articles)
         print(f"\nMention types across articles:")
-        print(f"  Explicit: {explicit}")
-        print(f"  Implicit: {implicit}")
+        print(f"  President: {president}")
+        print(f"  Ideological: {ideological}")
         print(f"  Party-based: {party}")
 
         presidents: dict[str, int] = {}
@@ -470,8 +470,8 @@ def analyze_article(client: anthropic.Anthropic, article: dict) -> dict:
     result["has_appointment_mentions"] = stage2.get("has_appointment_mentions", False)
     result["mentions"] = verified_mentions
     result["total_mentions"] = len(verified_mentions)
-    result["explicit_mentions"] = stage2.get("total_explicit_mentions", 0)
-    result["implicit_mentions"] = stage2.get("total_implicit_mentions", 0)
+    result["president_mentions"] = stage2.get("total_president_mentions", 0)
+    result["ideological_mentions"] = stage2.get("total_ideological_mentions", 0)
     result["party_mentions"] = stage2.get("total_party_mentions", 0)
 
     return result
