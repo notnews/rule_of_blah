@@ -1,4 +1,4 @@
-## The Rule of Blah
+## The Rule of Blah/Bench Marks
 
 The classical rule of law demands that legal outcomes track declared rules rather than the political commitments of whoever happens to be on the bench. Dicey's 1885 formulation still does the work: "no man is punishable or can lawfully be made to suffer in body or goods except for a distinct breach of law established in the ordinary legal manner before the ordinary courts of the land." Neutrality and consistency are the ideal. When judges' votes correlate systematically with the party of the president who appointed them, the ideal erodes, and so does public confidence that like cases will be treated alike.
 
